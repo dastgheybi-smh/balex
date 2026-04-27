@@ -55,6 +55,10 @@ class Client(BaseRouter):
     def install_plugin(self, plugin: Type[Plugin], name: str = None):
         plg = plugin(self)
         name = name or plg.name
+        for router in plg.routers:
+            self.include_router(router)
+        for name, plugin in plg.plugins.items():
+            self.install_plugin(plugin, name)
         setattr(self, name, plg)
 
     async def _install_routers_plugins(self):

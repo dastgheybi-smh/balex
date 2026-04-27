@@ -192,8 +192,7 @@ class BaseRouter:
             if not router in self.routers:
                 self.include_router(router)
 
-        self.routers.append(router)
-
+        if not router in self.routers: self.routers.append(router)
 
 
 class Router(BaseRouter):
