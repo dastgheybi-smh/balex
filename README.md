@@ -1,4 +1,4 @@
-# **Balex v0.2.4**
+# **Balex v0.3**
 
 ### What's "Balex"?
 

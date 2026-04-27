@@ -3,15 +3,12 @@ import aiohttp
 from typing import Literal, Type
 from traceback import format_exc
 from .models import CallbackQuery, AnswerCallbackQuery
-from .dispatcher import Dispatcher
+from .dispatcher import Dispatcher, FSMFactory
 from .models import Message, User
 import logging as log
 
 from .plugin import Plugin
 from .routers import BaleAPI, BaseRouter, Router, safe_coro
-
-
-# log.basicConfig(level=log.INFO)
 
 
 
@@ -20,9 +17,15 @@ class Client(BaseRouter):
     def __init__(self, token: str,
                  mode: Literal['webhook', 'polling'] = "polling",
                  webhook_url: str = None,
+                 default_state: str = None,
+                 without_state: bool = False,
+                 reactive_var_class = None,
                  wallet_token: str = None):
         super().__init__()
         self.token = token
+        self.fsm_factory = FSMFactory(reactive_var_class)
+        if not without_state:
+            self.fsm_factory.new_rv("state", default_state)
         self.dp = Dispatcher(self)
         self.offset = 0
         self.running = False
@@ -187,7 +190,7 @@ class Client(BaseRouter):
         await self._session.close()
 
     def run(self):
-        log.basicConfig(level=log.INFO)
+        log.basicConfig(level=log.DEBUG)
         log.info(f"Starting BaleX Client {self.mode} mode...")
         self.running = True
         try:
