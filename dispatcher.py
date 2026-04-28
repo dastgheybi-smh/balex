@@ -1,4 +1,5 @@
 import inspect
+import logging
 from typing import Callable, List
 import asyncio
 
@@ -48,23 +49,30 @@ class FSMFactory:
 
 
 class Dispatcher:
-    def __init__(self, client):
+    def __init__(self, client, fmt):
         self.client = client
+        self.fmt = fmt
         self._callback_handlers = []
         self.message_handlers: List[tuple] = []
         self.user_tasks = []
         self.running_tasks = []
 
-    def on_callback(self, data=None):
+    def on_callback(self, data=None, index=0):
         def decorator(func):
-            self._callback_handlers.append((data, func))
+            if index == "start":
+                self._callback_handlers.insert(0, (data, func))
+            elif index == "end":
+                self._callback_handlers.append((data, func))
             return func
 
         return decorator
 
-    def on_message(self, filters=None):
+    def on_message(self, filters=None, index=0):
         def decorator(func):
-            self.message_handlers.append((filters, func))
+            if index == "start":
+                self.message_handlers.insert(0, (filters, func))
+            elif index == "end":
+                self.message_handlers.append((filters, func))
             return func
         return decorator
 
@@ -89,7 +97,7 @@ class Dispatcher:
                     func()
 
             except Exception as e:
-                print(f"Task crashed: {func.__name__}: {e}")
+                logging.error(f"Task crashed: {func.__name__}: {e}")
 
             if interval is None:
                 break
@@ -128,6 +136,8 @@ class Dispatcher:
 
                 if ok:
                     await self.safe_filter(handler, message, fsm)
+                    if self.fmt:
+                        break
 
             else:
                 raise RuntimeError("Handlers must accept exactly one argument or 2 arguments with FSM (message)")
@@ -142,7 +152,7 @@ class Dispatcher:
 
         for handler_data, handler in self._callback_handlers:
             answer = None
-
+            fmt = True
 
             if callable(handler_data):
                 if self.safe_filter(handler_data, callback_query, fsm):
@@ -151,9 +161,13 @@ class Dispatcher:
             elif handler_data == data:
                 answer = await self.safe_filter(handler, callback_query, fsm)
 
+            else: fmt = False
+
 
             if not isinstance(answer, AnswerCallbackQuery):
                 await self.client.answer_callback_query(callback_query.id)
             else:
                 await self.client.answer_callback_query(callback_query.id, answer)
 
+            if fmt and self.fmt:
+                break

@@ -1,4 +1,6 @@
 from json import dumps
+from typing import Literal
+
 import aiohttp
 from .models import *
 import asyncio
@@ -44,11 +46,11 @@ class BaseRouter:
         self.dp = None
         self._session = None
 
-    def on_message(self, filters=None):
-        return self.dp.on_message(filters)
+    def on_message(self, filters=None, add_to: Literal["start", "end"] = "end"):
+        return self.dp.on_message(filters, add_to)
 
-    def on_callback(self, data=None):
-        return self.dp.on_callback(data)
+    def on_callback(self, data=None, add_to: Literal["start", "end"] = "end"):
+        return self.dp.on_callback(data, add_to)
 
     def task(self, func):
         self.dp.user_task(func)
@@ -185,7 +187,7 @@ class BaseRouter:
             "longitude": lon,
             "reply_markup": reply_markup
         }, self._session)
-    
+
 
     def include_router(self, router):
         for router in router.routers:
@@ -202,9 +204,9 @@ class Router(BaseRouter):
         self.message_handlers = []
         self.tasks = []
 
-    def on_callback(self, filters=None):
+    def on_callback(self, filters=None, add_to: Literal["start", "end"] = "end"):
         def decorator(func):
-            self._callback_handlers.append((filters, func))
+            self._callback_handlers.insert(index, (func, filters))
             return func
 
         return decorator
@@ -213,9 +215,9 @@ class Router(BaseRouter):
         self.tasks.append(func)
         return func
 
-    def on_message(self, filters=None):
+    def on_message(self, filters=None, add_to: Literal["start", "end"] = "end"):
         def decorator(func):
-            self.message_handlers.append((func, filters))
+            self.message_handlers.insert(index, (func, filters))
             return func
         return decorator
 

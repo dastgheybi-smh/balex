@@ -20,13 +20,14 @@ class Client(BaseRouter):
                  default_state: str = None,
                  without_state: bool = False,
                  reactive_var_class = None,
-                 wallet_token: str = None):
+                 wallet_token: str = None,
+                 first_match_terminator: bool = False,):
         super().__init__()
         self.token = token
         self.fsm_factory = FSMFactory(reactive_var_class)
         if not without_state:
             self.fsm_factory.new_rv("state", default_state)
-        self.dp = Dispatcher(self)
+        self.dp = Dispatcher(self, first_match_terminator)
         self.offset = 0
         self.running = False
         self.mode = mode
@@ -190,6 +191,8 @@ class Client(BaseRouter):
         await self._session.close()
 
     def run(self):
+        self.on_message(lambda f:False)(lambda m:"")
+        self.on_callback(lambda f:False)(lambda m:"")
         log.basicConfig(level=log.DEBUG)
         log.info(f"Starting BaleX Client {self.mode} mode...")
         self.running = True
