@@ -45,9 +45,24 @@ class BaseRouter:
         self.api = None
         self.dp = None
         self._session = None
+        self.global_filter_messages = None
+        self.global_filter_callbacks = None
 
-    def on_message(self, filters=None, add_to: Literal["start", "end"] = "end"):
-        return self.dp.on_message(filters, add_to)
+    def set_global_filter(self, global_filter: callable, for_=Literal["message", "callback", "both"]):
+        """Sets a global filter for this router.
+        global filter must be a decorator function."""
+        if for_ == "both":
+            self.global_filter_messages = global_filter
+            self.global_filter_callbacks = global_filter
+        elif for_ == "message":
+            self.global_filter_messages = global_filter
+        elif for_ == "callback":
+            self.global_filter_callbacks = global_filter
+
+    def on_message(self, filter=None, add_to: Literal["start", "end"] = "end"):
+        if self.global_filter_messages:
+            filter = self.global_filter_messages(filter)
+        return self.dp.on_message(filter, add_to)
 
     def on_callback(self, data=None, add_to: Literal["start", "end"] = "end"):
         return self.dp.on_callback(data, add_to)
