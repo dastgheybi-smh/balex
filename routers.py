@@ -57,7 +57,7 @@ class BaseRouter:
         return func
 
 
-    def inline(self, *rows: dict[str | int, str | int]):
+    def inline(self, *rows: dict[str | int, str | int | dict[Literal["callback_data", "web_app", "copy_text", "url"], str | int]]):
         keyboard = []
 
         for row in rows:
