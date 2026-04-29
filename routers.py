@@ -64,10 +64,15 @@ class BaseRouter:
             btn_row = []
 
             for text, data in row.items():
-                btn_row.append({
-                    "text": text,
-                    "callback_data": data
-                })
+                if isinstance(data, dict):
+                    btn_row.append({
+                        "text": text
+                    }.update(data))
+                else:
+                    btn_row.append({
+                       "text": text,
+                       "callback_data": data
+                    })
 
 
             keyboard.append(btn_row)
