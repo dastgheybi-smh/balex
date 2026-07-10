@@ -80,9 +80,9 @@ class BaseRouter:
 
             for text, data in row.items():
                 if isinstance(data, dict):
-                    btn_row.append({
-                        "text": text
-                    }.update(data))
+                    btn = {"text": text}
+                    btn.update(data)
+                    btn_row.append(btn)
                 else:
                     btn_row.append({
                        "text": text,
@@ -207,6 +207,67 @@ class BaseRouter:
             "longitude": lon,
             "reply_markup": reply_markup
         }, self._session)
+
+    async def edit_message_text(self, chat_id: int, message_id: int, text: str, reply_markup=None):
+        """Edits Message text"""
+        if not self._session:
+            raise RuntimeError("Client not running or session not initialized.")
+
+        data = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text": text
+        }
+
+        if reply_markup:
+            data["reply_markup"] = dumps(reply_markup)
+
+        return await self.api.request("editMessageText", data, self._session)
+
+    async def edit_message_caption(self, chat_id: int, message_id: int, caption: str, reply_markup=None):
+        """Edit Message caption"""
+        if not self._session:
+            raise RuntimeError("Client not running or session not initialized.")
+
+        data = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "caption": caption
+        }
+
+        if reply_markup:
+            data["reply_markup"] = dumps(reply_markup)
+
+        return await self.api.request("editMessageCaption", data, self._session)
+
+    async def edit_message_reply_markup(self, chat_id: int, message_id: int, reply_markup=None):
+        """Edits only the Message Reply Markup"""
+        if not self._session:
+            raise RuntimeError("Client not running or session not initialized.")
+
+        data = {
+            "chat_id": chat_id,
+            "message_id": message_id
+        }
+
+        if reply_markup:
+            data["reply_markup"] = dumps(reply_markup)
+        else:
+            data["reply_markup"] = dumps({"inline_keyboard": []})
+
+        return await self.api.request("editMessageReplyMarkup", data, self._session)
+
+    async def delete_message(self, chat_id: int, message_id: int):
+        """Deletes message"""
+        if not self._session:
+            raise RuntimeError("Client not running or session not initialized.")
+
+        data = {
+            "chat_id": chat_id,
+            "message_id": message_id
+        }
+
+        return await self.api.request("deleteMessage", data, self._session)
 
 
     def include_router(self, router):

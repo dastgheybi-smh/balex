@@ -117,6 +117,8 @@ class Dispatcher:
             return filter(m)
         if len(sig.parameters) == 2:
             return filter(m, fsm)
+        if len(sig.parameters) == 3:
+            return filter(m, fsm)
         else:
             raise RuntimeError("Filter must have exactly 1 or 2 parameters")
 
