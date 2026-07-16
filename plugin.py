@@ -33,8 +33,6 @@ class ChatPlugin(Plugin):
     def setup(self):
         self.name = "chat_plugin"
 
-    def
-
     async def _request(self, method: str, data=None):
         if not self.client._session:
             raise RuntimeError("Client not running.")
