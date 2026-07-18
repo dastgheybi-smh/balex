@@ -85,8 +85,8 @@ class BaseRouter:
                     btn_row.append(btn)
                 else:
                     btn_row.append({
-                       "text": text,
-                       "callback_data": data
+                        "text": text,
+                        "callback_data": data
                     })
 
 
@@ -270,12 +270,22 @@ class BaseRouter:
         return await self.api.request("deleteMessage", data, self._session)
 
 
-    def include_router(self, router):
-        for router in router.routers:
-            if not router in self.routers:
-                self.include_router(router)
+    def include_router(self, router, dependencies_first=False):
+        if dependencies_first:
+            for r in router.routers:
+                if not r in self.routers:
+                    print("including router {} to {}".format(router, self))
+                    self.include_router(r)
 
-        if not router in self.routers: self.routers.append(router)
+        if not router in self.routers:
+            self.routers.append(router)
+            print("including router {} to {}".format(router, self))
+
+        if not dependencies_first:
+            for r in router.routers:
+                if not r in self.routers:
+                    print("including router {} to {}".format(router, self))
+                    self.include_router(r)
 
 
 class Router(BaseRouter):
@@ -287,7 +297,7 @@ class Router(BaseRouter):
 
     def on_callback(self, filters=None, add_to: Literal["start", "end"] = "end"):
         def decorator(func):
-            self._callback_handlers.insert(index, (func, filters))
+            self._callback_handlers.insert(0 if add_to == "start" else -1, (filters, func))
             return func
 
         return decorator
@@ -298,7 +308,7 @@ class Router(BaseRouter):
 
     def on_message(self, filters=None, add_to: Literal["start", "end"] = "end"):
         def decorator(func):
-            self.message_handlers.insert(index, (func, filters))
+            self.message_handlers.insert(0 if add_to == "start" else -1, (filters, func))
             return func
         return decorator
 
