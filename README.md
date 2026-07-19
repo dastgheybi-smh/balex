@@ -1,4 +1,4 @@
-# **Balex v0.3.4**
+﻿# **Balex v0.5.2**
 
 ### What's "Balex"?
 
@@ -6,6 +6,6 @@ A powerful and easy-to-use lib for making Bots for Bale Messenger
 
 
 
-### Documention:
+### Documentation:
 
-The documention will be available here soon.
+view: https://dastgheybi.top/pybalex/doc

@@ -1,8 +1,10 @@
 import asyncio
+import datetime
+
 import aiohttp
 from typing import Literal, Type
 from traceback import format_exc
-from .models import CallbackQuery, AnswerCallbackQuery
+from .models import CallbackQuery, AnswerCallbackQuery, Chat
 from .dispatcher import Dispatcher, FSMFactory
 from .models import Message, User
 import logging as log
@@ -34,6 +36,7 @@ class Client(BaseRouter):
         self.webhook_url = webhook_url
         self.wallet_token = wallet_token
         self.plugins = {}
+        self._convertor = self._convertors()
 
 
     async def answer_callback_query(
@@ -75,6 +78,49 @@ class Client(BaseRouter):
     def task(self, interval=None):
         return self.dp.task(interval)
 
+    class _convertors:
+        def to_user(self, raw):
+            return User(id=raw["id"],
+                        name=raw.get("first_name"),
+                        username=raw.get("username"),
+                        language_code=raw.get("language_code"),
+                        is_bot=raw["is_bot"],
+                        raw=raw)
+
+        def to_chat(self, raw):
+            return Chat(id=raw["id"],
+                        type=raw["type"],
+                        name=raw.get("first_name"),
+                        username=raw.get("username"),
+                        title=raw.get("title"),
+                        raw=raw)
+
+        def to_message(self, raw, client):
+            return Message(
+                id=raw["message_id"],
+                chat_id=raw["chat"]["id"],
+                client=client,
+                text=raw.get("text"),
+                user=self.to_user(raw["from"]),
+                date=raw["date"],
+                chat=self.to_chat(raw["chat"]),
+                forward_from=raw.get("forward_from"),
+                reply_to=self.to_message(raw["reply_to"], client) if raw.get("reply_to") else None,
+                edit_date=raw.get("edit_date"),
+                raw=raw,
+            )
+
+        def to_callback_query(self, raw, client):
+            return CallbackQuery(
+                id=raw["id"],
+                chat_id=raw["chat_instance"],
+                data=raw.get("data"),
+                user=self.to_user(raw["from"]),
+                message=self.to_message(raw["message"], client) if raw["message"] else None,
+                raw=raw,
+            )
+
+
     async def poll_updates(self):
         self._session = aiohttp.ClientSession()
         self.api = BaleAPI(self.token, self._session)
@@ -96,30 +142,13 @@ class Client(BaseRouter):
 
                     if "callback_query" in upd:
                         raw = upd["callback_query"]
-                        safe_coro(self.dp.emit_callback(CallbackQuery(
-                            id=raw["id"],
-                            chat_id=raw["chat_instance"],
-                            data=raw.get("data"),
-                            user=User(id=raw["from"]["id"], name=raw["from"].get("first_name")),
-                            message=Message(
-                                message_id=raw["message"]["message_id"],
-                                chat_id=raw["message"]["chat"]["id"],
-                                text=raw["message"].get("text"),
-                                user=User(id=raw["from"]["id"], name=raw["from"].get("first_name")),
-                                raw=raw["message"],
-                            ),
-                            raw=raw,
-                        )))
+                        safe_coro(self.dp.emit_callback(
+                            self._convertor.to_callback_query(raw, self),
+                        ))
 
                     if "message" in upd:
                         raw = upd["message"]
-                        msg = Message(
-                            message_id=raw["message_id"],
-                            chat_id=raw["chat"]["id"],
-                            text=raw.get("text"),
-                            user=User(id=raw["from"]["id"], name=raw["from"].get("first_name")),
-                            raw=raw,
-                        )
+                        msg = self._convertor.to_message(raw, self)
                         safe_coro(self.dp.emit_message(msg))
 
             except aiohttp.ClientError as e:
@@ -148,30 +177,11 @@ class Client(BaseRouter):
                 upd = await request.json()
                 if "callback_query" in upd:
                     raw = upd["callback_query"]
-                    safe_coro(self.dp.emit_callback(CallbackQuery(
-                        id=raw["id"],
-                        chat_id=raw["chat_instance"],
-                        data=raw.get("data"),
-                        user=User(id=raw["from"]["id"], name=raw["from"].get("first_name")),
-                        message=Message(
-                            message_id=raw["message"]["message_id"],
-                            chat_id=raw["message"]["chat"]["id"],
-                            text=raw["message"].get("text"),
-                            user=User(id=raw["from"]["id"], name=raw["from"].get("first_name")),
-                            raw=raw["message"],
-                        ),
-                        raw=raw,
-                    )))
+                    safe_coro(self.dp.emit_callback(self._convertor.to_callback_query(raw, self)))
 
                 if "message" in upd:
                     raw = upd["message"]
-                    msg = Message(
-                        message_id=raw["message_id"],
-                        chat_id=raw["chat"]["id"],
-                        text=raw.get("text"),
-                        user=User(id=raw["from"]["id"], name=raw["from"].get("first_name")),
-                        raw=raw,
-                    )
+                    msg = self._convertor.to_message(raw, self)
                     safe_coro(self.dp.emit_message(msg))
             except Exception as e:
                 print(f"Error processing webhook request: {e}")
@@ -214,5 +224,7 @@ class Client(BaseRouter):
             self.running = False
             if self._session and not self._session.closed:
                 asyncio.run(self._session.close())
+
+
 
 Bot = Client
