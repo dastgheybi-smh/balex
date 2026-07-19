@@ -109,18 +109,18 @@ class BaseRouter:
             "selective": selective
         }
 
-    async def send_message(self, chat_id: int, text: str, reply_markup=None):
+    async def send_message(self, chat_id: int, text: str, reply_markup=None, reply_to_message_id=None):
         if not self._session:
             raise RuntimeError("Client not running or session not initialized.")
 
-        data = {"chat_id": chat_id, "text": text}
+        data = {"chat_id": chat_id, "text": text, "reply_to_message_id": reply_to_message_id}
 
         if reply_markup:
             data["reply_markup"] = dumps(reply_markup)
 
         return await self.api.request("sendMessage", data, self._session)
 
-    async def send_photo(self, chat_id: int, photo, caption=None, reply_markup=None):
+    async def send_photo(self, chat_id: int, photo, caption=None, reply_markup=None, reply_to_message_id=None):
         if not self._session:
             raise RuntimeError("Client not running or session not initialized.")
 
@@ -128,6 +128,9 @@ class BaseRouter:
         data.add_field("chat_id", str(chat_id))
         if reply_markup:
             data.add_field("reply_markup", dumps(reply_markup))
+
+        if reply_to_message_id:
+            data.add_field("reply_to_message_id", reply_to_message_id)
 
         if caption:
             data.add_field("caption", caption)
@@ -139,7 +142,7 @@ class BaseRouter:
 
         return await self.api.request("sendPhoto", data, self._session)
 
-    async def send_file(self, chat_id: int, file_path: str, caption=None, reply_markup=None):
+    async def send_file(self, chat_id: int, file_path: str, caption=None, reply_markup=None, reply_to_message_id=None):
         if not self._session:
             raise RuntimeError("Client not running or session not initialized.")
 
@@ -148,6 +151,8 @@ class BaseRouter:
         if reply_markup:
             data.add_field("reply_markup", dumps(reply_markup))
 
+        if reply_to_message_id:
+            data.add_field("reply_to_message_id", reply_to_message_id)
 
         if caption:
             data.add_field("caption", caption)
@@ -160,7 +165,7 @@ class BaseRouter:
 
         return await self.api.request("sendDocument", data, self._session)
 
-    async def send_voice(self, chat_id: int, voice, caption=None, reply_markup=None):
+    async def send_voice(self, chat_id: int, voice, caption=None, reply_markup=None, reply_to_message_id=None):
         if not self._session:
             raise RuntimeError("Client not running or session not initialized.")
 
@@ -169,6 +174,8 @@ class BaseRouter:
         if reply_markup:
             data.add_field("reply_markup", dumps(reply_markup))
 
+        if reply_to_message_id:
+            data.add_field("reply_to_message_id", reply_to_message_id)
 
         if caption:
             data.add_field("caption", caption)
@@ -180,13 +187,16 @@ class BaseRouter:
 
         return await self.api.request("sendVoice", data, self._session)
 
-    async def send_video(self, chat_id: int, video, caption=None, reply_markup=None):
+    async def send_video(self, chat_id: int, video, caption=None, reply_markup=None, reply_to_message_id=None):
         if not self._session:
             raise RuntimeError("Client not running or session not initialized.")
         data = aiohttp.FormData()
         data.add_field("chat_id", str(chat_id))
         if reply_markup:
             data.add_field("reply_markup", dumps(reply_markup))
+
+        if reply_to_message_id:
+            data.add_field("reply_to_message_id", reply_to_message_id)
 
         if caption:
             data.add_field("caption", caption)
@@ -198,14 +208,15 @@ class BaseRouter:
 
         return await self.api.request("sendVideo", data, self._session)
 
-    async def send_location(self, chat_id, lat, lon, reply_markup=None):
+    async def send_location(self, chat_id, lat, lon, reply_markup=None, reply_to_message_id=None):
         if not self._session:
             raise RuntimeError("Client not running or session not initialized.")
         return await self.api.request("sendLocation", {
             "chat_id": chat_id,
             "latitude": lat,
             "longitude": lon,
-            "reply_markup": reply_markup
+            "reply_markup": reply_markup,
+            "reply_to_message_id": reply_to_message_id
         }, self._session)
 
     async def edit_message_text(self, chat_id: int, message_id: int, text: str, reply_markup=None):
@@ -274,17 +285,14 @@ class BaseRouter:
         if dependencies_first:
             for r in router.routers:
                 if not r in self.routers:
-                    print("including router {} to {}".format(router, self))
                     self.include_router(r)
 
         if not router in self.routers:
             self.routers.append(router)
-            print("including router {} to {}".format(router, self))
 
         if not dependencies_first:
             for r in router.routers:
                 if not r in self.routers:
-                    print("including router {} to {}".format(router, self))
                     self.include_router(r)
 
 
